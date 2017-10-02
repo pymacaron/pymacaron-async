@@ -1,15 +1,23 @@
+import sys
+import os
 import logging
 import inspect
+from flask import Flask, request
 from functools import wraps
 from subprocess import Popen
 from celery import Celery
 from klue_async.app import app
+from klue_microservice.config import get_config
+from klue_microservice.auth import get_user_token, load_auth_token
 
 
 log = logging.getLogger(__name__)
 
 
-def start_celery(debug):
+flaskapp = Flask('klue-async')
+
+
+def start_celery(port, debug):
     """Make sure both celeryd and rabbitmq are running"""
 
     # TODO: first, killall celery and wait for them to have terminated
@@ -17,6 +25,8 @@ def start_celery(debug):
     level = 'debug' if debug else 'info'
     maxmem = 200*1024
     concurrency = 1
+    os.environ['KLUE_CELERY_PORT'] = str(port)
+    os.environ['KLUE_CELERY_DEBUG'] = '1' if debug else ''
     cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
 
     log.info("Spawning celery worker")
@@ -30,23 +40,48 @@ def start_celery(debug):
 
 def asynctask(f):
 
-    log.info("\n\n\n\n\nRegistering celery task for %s()\n\n\n\n\n" % (f.__name__))
-
-    # Import the module where f is located
+    fname = f.__name__
     m = inspect.getmodule(f)
-    if not m:
-        raise Exception("Failed to find the module containing %s()" % (f.__name__))
-    log.debug("%s() is from module %s" % (f.__name__, m))
+    if m:
+        fname = '%s.%s()' % (m.__name__, f.__name__)
 
+    #
+    # Is this code loading inside a Flask app or a Celery worker?
+    #
 
+    if 'celery' in sys.argv[0].lower():
 
-    # Make f into a celery task
-    f = app.task(f)
-    log.debug("got back: %s" % f)
+        # We are in celery - Let's put f in a wrapper around f that emulates a
+        # Flask context + handles crashes the same way klue-microservice does
+        # for API endpoints
+        log.info("Wrapping %s in a Flask/Klue context emulator" % fname)
 
-    def wrap_task(*args, **kwargs):
-        log.info('Queuing celery task for %s()' % (f.__name__, ))
-        f.delay(*args, **kwargs)
+        @wraps(f)
+        def mock_flask_context(url, token, *args, **kwargs):
+            log.info("klue-async wrapper: using url [%s] and token [%s]" % (url, token))
+            with flaskapp.test_request_context(url):
+                if token:
+                    load_auth_token(token)
+                log.info("klue-async wrapper: calling %s" % fname)
+                f(*args, **kwargs)
+
+        # TODO: decorate with klue crash-handler
+
+        # Then register task
+        newf = app.task(mock_flask_context, typing=False)
+        return newf
+
+    # We are in the Flask app
+    log.info("Registering celery task for %s" % fname)
+    f = app.task(f, typing=False)
+
+    # Call the asynchronous method via celery
+    def queue_task(*args, **kwargs):
+        url = request.url
+        token = get_user_token()
+        log.info('Queuing celery task for %s' % fname)
+        f.delay(url, token, *args, **kwargs)
         return
 
-    return wrap_task
+    # And return the stub launching the Celery task
+    return queue_task

@@ -3,6 +3,7 @@ import sys
 import logging
 import inspect
 import importlib
+import imp
 from klue_microservice import get_config
 from klue_async.app import app
 
@@ -16,6 +17,14 @@ log.info("Appending %s to python PATH" % root_dir)
 sys.path.append(root_dir)
 
 # Find apis, and load all modules used in the api specs
-for m in get_config().load_async_modules:
-    log.info("Loading module %s" % m)
-    importlib.import_module(m)
+#for m in get_config().load_async_modules:
+#    log.info("Loading module %s" % m)
+#    importlib.import_module(m)
+
+# Get port & debug passed via environ by start_celery()
+port = int(os.environ['KLUE_CELERY_PORT'])
+debug = True if os.environ['KLUE_CELERY_DEBUG'] else False
+
+# Find server.py, load it and call start()
+server = imp.load_source('server', os.path.join(root_dir, 'server.py'))
+server.start(port=port, debug=debug)
