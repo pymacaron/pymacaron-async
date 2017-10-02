@@ -1,21 +1,12 @@
 import logging
 import inspect
 from functools import wraps
-from subprocess import Popen, PIPE, STDOUT
-from klue_microservice import get_config
+from subprocess import Popen
 from celery import Celery
+from klue_async.app import app
 
 
 log = logging.getLogger(__name__)
-
-
-app = Celery('tasks', broker='pyamqp://guest@localhost//')
-
-app.conf.update(
-    task_serializer='json',
-    accept_content=['json'],
-    result_serializer='json',
-)
 
 
 def start_celery(debug):
@@ -26,7 +17,7 @@ def start_celery(debug):
     level = 'debug' if debug else 'info'
     maxmem = 200*1024
     concurrency = 1
-    cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async,server --max-memory-per-child=%s' % (concurrency, level, maxmem)
+    cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
 
     log.info("Spawning celery worker")
     proc = Popen(
