@@ -17,17 +17,21 @@ log = logging.getLogger(__name__)
 flaskapp = Flask('klue-async')
 
 
+def get_celery_cmd(debug):
+    level = 'debug' if debug else 'info'
+    maxmem = 200*1024
+    concurrency = 1
+    return 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
+
+
 def start_celery(port, debug):
     """Make sure both celeryd and rabbitmq are running"""
 
     # TODO: first, killall celery and wait for them to have terminated
 
-    level = 'debug' if debug else 'info'
-    maxmem = 200*1024
-    concurrency = 1
     os.environ['KLUE_CELERY_PORT'] = str(port)
     os.environ['KLUE_CELERY_DEBUG'] = '1' if debug else ''
-    cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
+    cmd = get_celery_cmd(debug)
 
     log.info("Spawning celery worker")
     proc = Popen(

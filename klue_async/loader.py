@@ -16,8 +16,9 @@ log.info("Appending %s to python PATH" % root_dir)
 sys.path.append(root_dir)
 
 # Get port & debug passed via environ by start_celery()
-port = int(os.environ['KLUE_CELERY_PORT'])
-debug = True if os.environ['KLUE_CELERY_DEBUG'] else False
+# The defaults are for when running in a container via gunicorn
+port = int(os.environ.get('KLUE_CELERY_PORT', 80))
+debug = True if os.environ.get('KLUE_CELERY_DEBUG', False) else False
 
 # Find server.py, load it and call start()
 server = imp.load_source('server', os.path.join(root_dir, 'server.py'))
