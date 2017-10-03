@@ -4,7 +4,6 @@ import logging
 import inspect
 import imp
 from klue_microservice import get_config
-from klue_async.app import app
 
 
 log = logging.getLogger(__name__)

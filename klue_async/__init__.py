@@ -9,6 +9,7 @@ from celery import Celery
 from klue_async.app import app
 from klue_microservice.config import get_config
 from klue_microservice.auth import get_user_token, load_auth_token
+from klue_microservice.crash import generate_crash_handler_decorator
 
 
 log = logging.getLogger(__name__)
@@ -55,10 +56,13 @@ def asynctask(f):
 
     if 'celery' in sys.argv[0].lower():
 
-        # We are in celery - Let's put f in a wrapper around f that emulates a
-        # Flask context + handles crashes the same way klue-microservice does
-        # for API endpoints
+        # We are in celery - Let's put f in a wrapper that emulates a Flask
+        # context + handles crashes the same way klue-microservice does for API
+        # endpoints
         log.info("Wrapping %s in a Flask/Klue context emulator" % fname)
+
+        # Wrap f in the same crash handler as used in the API server
+        f = generate_crash_handler_decorator()(f)
 
         @wraps(f)
         def mock_flask_context(url, token, *args, **kwargs):
@@ -68,8 +72,6 @@ def asynctask(f):
                     load_auth_token(token)
                 log.info("klue-async wrapper: calling %s" % fname)
                 f(*args, **kwargs)
-
-        # TODO: decorate with klue crash-handler
 
         # Then register task
         newf = app.task(mock_flask_context, typing=False)
