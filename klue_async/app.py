@@ -30,6 +30,9 @@ app.conf.update(
     broker_transport_options={
         'region': get_config().aws_default_region,
         'queue_name_prefix': prefix,
+        # Make SQS task again visible to other workers after 10min
+        'visibility_timeout': 600,
+        'polling_interval': 1,
     },
     broker_user=get_config().aws_access_key_id,
     broker_password=get_config().aws_secret_access_key,
