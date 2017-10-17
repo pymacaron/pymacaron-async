@@ -42,12 +42,15 @@ setup(
         'klue-unit',
         'klue-microservice',
         'celery',
+        'boto3',
+	'pycurl',
     ],
     tests_require=[
         'psutil',
         'nose',
         'mock',
-        'pep8'
+        'pep8',
+        'boto3',
         'klue-unit',
         'klue-microservice',
         'celery',
