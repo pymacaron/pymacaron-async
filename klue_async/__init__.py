@@ -22,7 +22,8 @@ def get_celery_cmd(debug):
     level = 'debug' if debug else 'info'
     maxmem = 200*1024
     concurrency = 1
-    return 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
+    # 20171017: a bug in boto3/kombu causes workers to die if network connection with SQS is lost => dirty fix with while-restart loop
+    return 'while true; do celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s 2&>1 >>/var/log/celery.log; sleep 5; done' % (concurrency, level, maxmem)
 
 
 def start_celery(port, debug):
