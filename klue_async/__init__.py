@@ -18,22 +18,25 @@ log = logging.getLogger(__name__)
 flaskapp = Flask('klue-async')
 
 
-def get_celery_cmd(debug):
+def get_celery_cmd(debug, keep_alive=True):
     level = 'debug' if debug else 'info'
     maxmem = 200*1024
     concurrency = 1
     # 20171017: a bug in boto3/kombu causes workers to die if network connection with SQS is lost => dirty fix with while-restart loop
-    return 'while true; do celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s; sleep 5; done' % (concurrency, level, maxmem)
+    cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
+    if keep_alive:
+        cmd = 'while true; do %s; sleep 5; done' % cmd
+    return cmd
 
 
 def start_celery(port, debug):
-    """Make sure both celeryd and rabbitmq are running"""
+    """Start celery workers"""
 
     # TODO: first, killall celery and wait for them to have terminated
 
     os.environ['KLUE_CELERY_PORT'] = str(port)
     os.environ['KLUE_CELERY_DEBUG'] = '1' if debug else ''
-    cmd = get_celery_cmd(debug)
+    cmd = get_celery_cmd(debug, keep_alive=False)
 
     log.info("Spawning celery worker")
     proc = Popen(
