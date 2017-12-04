@@ -5,9 +5,7 @@ import inspect
 from flask import Flask, request
 from functools import wraps
 from subprocess import Popen
-from celery import Celery
 from klue_async.app import app
-from klue_microservice.config import get_config
 from klue_microservice.auth import get_user_token, load_auth_token
 from klue_microservice.crash import generate_crash_handler_decorator
 
@@ -18,14 +16,15 @@ log = logging.getLogger(__name__)
 flaskapp = Flask('klue-async')
 
 
-def get_celery_cmd(debug, keep_alive=True):
+def get_celery_cmd(debug, keep_alive=False):
     level = 'debug' if debug else 'info'
     maxmem = 200*1024
     concurrency = 1
-    # 20171017: a bug in boto3/kombu causes workers to die if network connection with SQS is lost => dirty fix with while-restart loop
+
     cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
     if keep_alive:
         cmd = 'while true; do %s; sleep 5; done' % cmd
+
     return cmd
 
 
@@ -39,7 +38,7 @@ def start_celery(port, debug):
     cmd = get_celery_cmd(debug, keep_alive=False)
 
     log.info("Spawning celery worker")
-    proc = Popen(
+    Popen(
         [cmd],
         bufsize=0,
         shell=True,

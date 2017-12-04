@@ -1,7 +1,7 @@
 # klue-microservice-async
 
 An extension of klue-microservice seamlessly adding asynchronous task execution
-based on celery/Amazon SQS.
+based on celery/Redis.
 
 [klue-microservice](https://github.com/erwan-lemonnier/klue-microservice) is a
 Python framework for easily defining, implementing and deploying REST apis onto
@@ -32,9 +32,12 @@ method.
 
 ## Setup
 
-Enable SQS in your Amazon AWS console.
+Install redis in your dev environment:
 
-Add SQS read/write permissions to the IAM user used by your klue microservice.
+```shell
+apt-get install redis-server
+pip install redis
+```
 
 Add klue-microservice-async to your klue-microservice project:
 
