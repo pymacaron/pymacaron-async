@@ -1,5 +1,6 @@
 import sys
 import os
+import signal
 import logging
 import inspect
 from flask import Flask, request
@@ -28,11 +29,22 @@ def get_celery_cmd(debug, keep_alive=False):
     return cmd
 
 
+def kill_celery():
+    """Kill celery workers"""
+    for line in os.popen("ps ax | grep 'celery worker -E -A klue_async' | grep -v grep"):
+        fields = line.split()
+        pid = fields[0]
+        log.warn("Killing celery worker with pid %s" % pid)
+        os.kill(int(pid), signal.SIGTERM)
+
+
 def start_celery(port, debug):
     """Start celery workers"""
 
-    # TODO: first, killall celery and wait for them to have terminated
+    # First, stop currently running celery workers (only those running klue microservices)
+    kill_celery()
 
+    # Then start celery anew
     os.environ['KLUE_CELERY_PORT'] = str(port)
     os.environ['KLUE_CELERY_DEBUG'] = '1' if debug else ''
     cmd = get_celery_cmd(debug, keep_alive=False)
