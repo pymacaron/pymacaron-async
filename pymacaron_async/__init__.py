@@ -6,15 +6,15 @@ import inspect
 from flask import Flask, request
 from functools import wraps
 from subprocess import Popen
-from klue_async.app import app
-from klue_microservice.auth import get_user_token, load_auth_token
-from klue_microservice.crash import generate_crash_handler_decorator
+from pymacaron_async.app import app
+from pymacaron.auth import get_user_token, load_auth_token
+from pymacaron.crash import generate_crash_handler_decorator
 
 
 log = logging.getLogger(__name__)
 
 
-flaskapp = Flask('klue-async')
+flaskapp = Flask('pym-async')
 
 
 def get_celery_cmd(debug, keep_alive=False):
@@ -22,7 +22,7 @@ def get_celery_cmd(debug, keep_alive=False):
     maxmem = 200*1024
     concurrency = 1
 
-    cmd = 'celery worker -E -A klue_async --concurrency=%s --loglevel=%s --include klue_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
+    cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
     if keep_alive:
         cmd = 'while true; do %s; sleep 5; done' % cmd
 
@@ -31,7 +31,7 @@ def get_celery_cmd(debug, keep_alive=False):
 
 def kill_celery():
     """Kill celery workers"""
-    for line in os.popen("ps ax | grep 'celery worker -E -A klue_async' | grep -v grep"):
+    for line in os.popen("ps ax | grep 'celery worker -E -A pymacaron_async' | grep -v grep"):
         fields = line.split()
         pid = fields[0]
         log.warn("Killing celery worker with pid %s" % pid)
@@ -41,12 +41,12 @@ def kill_celery():
 def start_celery(port, debug):
     """Start celery workers"""
 
-    # First, stop currently running celery workers (only those running klue microservices)
+    # First, stop currently running celery workers (only those running pymacaron microservices)
     kill_celery()
 
     # Then start celery anew
-    os.environ['KLUE_CELERY_PORT'] = str(port)
-    os.environ['KLUE_CELERY_DEBUG'] = '1' if debug else ''
+    os.environ['PYM_CELERY_PORT'] = str(port)
+    os.environ['PYM_CELERY_DEBUG'] = '1' if debug else ''
     cmd = get_celery_cmd(debug, keep_alive=False)
 
     log.info("Spawning celery worker")
@@ -72,20 +72,20 @@ def asynctask(f):
     if 'celery' in sys.argv[0].lower():
 
         # We are in celery - Let's put f in a wrapper that emulates a Flask
-        # context + handles crashes the same way klue-microservice does for API
-        # endpoints
-        log.info("Wrapping %s in a Flask/Klue context emulator" % fname)
+        # context + handles crashes the same way pymacaron microservice does
+        # for API endpoints
+        log.info("Wrapping %s in a Flask/PyMacaron context emulator" % fname)
 
         # Wrap f in the same crash handler as used in the API server
         f = generate_crash_handler_decorator()(f)
 
         @wraps(f)
         def mock_flask_context(url, token, *args, **kwargs):
-            log.info("klue-async wrapper: using url [%s] and token [%s]" % (url, token))
+            log.info("pymacaron-async wrapper: using url [%s] and token [%s]" % (url, token))
             with flaskapp.test_request_context(url):
                 if token:
                     load_auth_token(token)
-                log.info("klue-async wrapper: calling %s" % fname)
+                log.info("pymacaron-async wrapper: calling %s" % fname)
                 f(*args, **kwargs)
 
         # Then register task
