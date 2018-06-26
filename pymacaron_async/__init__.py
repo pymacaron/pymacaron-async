@@ -19,7 +19,7 @@ flaskapp = Flask('pym-async')
 
 def get_celery_cmd(debug, keep_alive=False):
     level = 'debug' if debug else 'info'
-    maxmem = 200*1024
+    maxmem = 200 * 1024
     concurrency = 1
 
     cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
