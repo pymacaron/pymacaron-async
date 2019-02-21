@@ -1,7 +1,5 @@
 import logging
 from celery import Celery
-from pymacaron import get_config
-from pymacaron.utils import get_app_name
 from pymacaron.monitor import monitor_init
 
 
