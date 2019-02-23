@@ -1,6 +1,8 @@
 import logging
 from celery import Celery
+from celery.signals import after_setup_logger
 from pymacaron.monitor import monitor_init
+from pymacaron.log import setup_logger
 
 
 log = logging.getLogger(__name__)
@@ -8,6 +10,11 @@ log = logging.getLogger(__name__)
 
 app = Celery('tasks')
 
+
+# Override celery logging
+@after_setup_logger.connect
+def setup_loggers(logger, *args, **kwargs):
+    setup_logger(async=True)
 
 # Initialize monitoring, if any
 monitor_init(celery=True)
