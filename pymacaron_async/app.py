@@ -14,7 +14,7 @@ app = Celery('tasks')
 # Override celery logging
 @after_setup_logger.connect
 def setup_loggers(logger, *args, **kwargs):
-    setup_logger(async=True)
+    setup_logger(celery=True)
 
 # Initialize monitoring, if any
 monitor_init(celery=True)
