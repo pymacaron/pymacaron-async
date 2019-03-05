@@ -3,6 +3,7 @@ import os
 import signal
 import logging
 import inspect
+import json
 from flask import Flask, request
 from functools import wraps
 from subprocess import Popen
@@ -81,11 +82,20 @@ def asynctask(f):
 
         @wraps(f)
         def mock_flask_context(url, token, *args, **kwargs):
-            log.info("pymacaron-async wrapper: using url [%s] and token [%s]" % (url, token))
+            log.info('')
+            log.info('')
+            log.info(' => ASYNC TASK %s' % fname)
+            log.info('')
+            log.info('')
+            log.info('    url: %s' % url)
+            log.info('    token: %s' % token)
+            log.debug('    args: %s' % json.dumps(args, indent=4))
+            log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
+            log.info('')
+            log.info('')
             with flaskapp.test_request_context(url):
                 if token:
                     load_auth_token(token)
-                log.info("pymacaron-async wrapper: calling %s" % fname)
                 f(*args, **kwargs)
 
         # Then register task
