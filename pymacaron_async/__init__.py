@@ -63,6 +63,25 @@ class asynctask(object):
 
     def __init__(self, delay=0):
         self.delay = delay
+        self.magic = 'PYMACARON_ALSO_WHIPS_THE_LLAMA_S'
+
+    def get_task_scheduler(self, fname, f):
+        """Return a function that will schedule a task to execute f"""
+        log.info("Registering celery task for %s (delay: %s)" % (fname, self.delay))
+        f = app.task(f, typing=False)
+
+        # Call the asynchronous method via celery
+        def queue_task(*args, **kwargs):
+            url = request.url
+            token = get_user_token()
+            log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
+            args = (self.magic, url, token) + args
+            f.apply_async(args=args, kwargs=kwargs, countdown=self.delay)
+            # f.delay(url, token, *args, **kwargs)
+            return
+
+        return queue_task
+
 
     def __call__(self, f):
         fname = f.__name__
@@ -70,27 +89,38 @@ class asynctask(object):
         if m:
             fname = '%s.%s()' % (m.__name__, f.__name__)
 
-        log.info("ASLDKJALSDKJALSDKJASDKJ => %s" % fname)
-
         #
         # Is this code loading inside a Flask app or a Celery worker?
         #
 
-        if 'celery' in sys.argv[0].lower():
+        if 'celery' not in sys.argv[0].lower():
+            # We are in the Flask app. Let's just schedule the task
+            return self.get_task_scheduler(fname, f)
 
-            # We are in celery - Let's put f in a wrapper that emulates a Flask
-            # context + handles crashes the same way pymacaron microservice does
-            # for API endpoints
-            log.info("Wrapping %s in a Flask/PyMacaron context emulator" % fname)
 
-            # Wrap f in the same crash handler as used in the API server
-            f = generate_crash_handler_decorator()(f)
+        # We are in celery - Let's put f in a wrapper that emulates a Flask
+        # context + handles crashes the same way pymacaron microservice does
+        # for API endpoints
+        log.info("Wrapping %s in a Flask/PyMacaron context emulator" % fname)
 
-            @wraps(f)
-            def mock_flask_context(url, token, *args, **kwargs):
+        # Wrap f in the same crash handler as used in the API server
+        f = generate_crash_handler_decorator()(f)
+
+        @wraps(f)
+        def mock_flask_context(*args, **kwargs):
+
+            # We are executing in a worker, but this worker could be scheduling a new task...
+            # Let's check if the token is indeed a token. If not, we assume the worker
+            # is scheduling a new task.
+            if args and len(args) > 3 and type(args[0]) is str and args[0] == self.magic:
+                # Wheeee!!! We got a task to execute!
+                url = args[1]
+                token = args[2]
+                args = args[3:]
+
                 log.info('')
                 log.info('')
-                log.info(' => ASYNC TASK %s' % fname)
+                log.info(' => ASYNC TASK %s (delayed: %s sec)' % (fname, self.delay))
                 log.info('')
                 log.info('')
                 log.info('    url: %s' % url)
@@ -103,24 +133,10 @@ class asynctask(object):
                     if token:
                         load_auth_token(token)
                     f(*args, **kwargs)
+            else:
+                # This is a task in a task, we should reschedule it
+                self.get_task_scheduler(fname, f)(*args, **kwargs)
 
-            # Then register task
-            newf = app.task(mock_flask_context, typing=False)
-            return newf
-
-        # We are in the Flask app
-        log.info("Registering celery task for %s" % fname)
-        f = app.task(f, typing=False)
-
-        # Call the asynchronous method via celery
-        def queue_task(*args, **kwargs):
-            url = request.url
-            token = get_user_token()
-            log.info('Queuing celery task for %s' % fname)
-            args = (url, token) + args
-            f.apply_async(args=args, kwargs=kwargs, countdown=self.delay)
-            # f.delay(url, token, *args, **kwargs)
-            return
-
-        # And return the stub launching the Celery task
-        return queue_task
+        # Return the wrapped task
+        newf = app.task(mock_flask_context, typing=False)
+        return newf
