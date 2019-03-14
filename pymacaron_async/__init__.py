@@ -112,7 +112,7 @@ class asynctask(object):
             # We are executing in a worker, but this worker could be scheduling a new task...
             # Let's check if the token is indeed a token. If not, we assume the worker
             # is scheduling a new task.
-            if args and len(args) > 3 and type(args[0]) is str and args[0] == self.magic:
+            if args and len(args) >= 3 and type(args[0]) is str and args[0] == self.magic:
                 # Wheeee!!! We got a task to execute!
                 url = args[1]
                 token = args[2]
