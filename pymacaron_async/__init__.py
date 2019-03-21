@@ -134,8 +134,9 @@ class asynctask(object):
                         load_auth_token(token)
                     f(*args, **kwargs)
             else:
-                # This is a task in a task, we should reschedule it
-                self.get_task_scheduler(fname, f)(*args, **kwargs)
+                # This is a task in a task, no need to reschedule it
+                log.info(" => TASK IN TASK: executing %s immediately" % fname)
+                f(*args, **kwargs)
 
         # Return the wrapped task
         newf = app.task(mock_flask_context, typing=False)
