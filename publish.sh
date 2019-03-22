@@ -26,7 +26,7 @@ VERSION="0.0.$GIT_COUNT"
 echo "=> VERSION=$VERSION"
 
 echo "=> Running nosetests"
-nosetests
+nosetests -xv test/
 
 echo "=> Build+Upload dist"
 python setup.py sdist upload -r pypi --version $VERSION
