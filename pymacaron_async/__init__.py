@@ -1,11 +1,11 @@
-import sys
 import os
 import signal
 import logging
 import inspect
 import json
 from flask import Flask, request
-from functools import wraps
+from functools import wraps, update_wrapper
+import types
 from subprocess import Popen
 from pymacaron_async.app import app
 from pymacaron.auth import get_user_token, load_auth_token
@@ -21,7 +21,7 @@ flaskapp = Flask('pym-async')
 def get_celery_cmd(debug, keep_alive=False):
     level = 'debug' if debug else 'info'
     maxmem = 200 * 1024
-    concurrency = 2
+    concurrency = 1
 
     cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
     if keep_alive:
@@ -59,28 +59,45 @@ def start_celery(port, debug):
     )
 
 
+def copy_func(f):
+    """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__,
+                           closure=f.__closure__)
+    g = update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
+
+
 class asynctask(object):
 
     def __init__(self, delay=0):
         self.delay = delay
         self.magic = 'PYMACARON_ALSO_WHIPS_THE_LLAMA_S'
 
-    def get_task_scheduler(self, fname, f):
-        """Return a function that will schedule a task to execute f"""
-        log.info("Registering celery task for %s (delay: %s)" % (fname, self.delay))
-        f = app.task(f, typing=False)
 
-        # Call the asynchronous method via celery
-        def queue_task(*args, **kwargs):
-            url = request.url
-            token = get_user_token()
-            log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
-            args = (self.magic, url, token) + args
-            f.apply_async(args=args, kwargs=kwargs, countdown=self.delay)
-            # f.delay(url, token, *args, **kwargs)
-            return
+    def exec_f(self, f, fname, args, kwargs):
+        """Execute the method f asynchronously, in a mocked flask context"""
+        url = args[1]
+        token = args[2]
+        args = args[3:]
 
-        return queue_task
+        log.info('')
+        log.info('')
+        log.info(' => ASYNC TASK %s (delayed: %s sec)' % (fname, self.delay))
+        log.info('')
+        log.info('')
+        log.info('    url: %s' % url)
+        log.info('    token: %s' % token)
+        log.debug('    args: %s' % json.dumps(args, indent=4))
+        log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
+        log.info('')
+        log.info('')
+
+        with flaskapp.test_request_context(url):
+            if token:
+                load_auth_token(token)
+            f(*args, **kwargs)
 
 
     def __call__(self, f):
@@ -89,55 +106,39 @@ class asynctask(object):
         if m:
             fname = '%s.%s()' % (m.__name__, f.__name__)
 
-        #
-        # Is this code loading inside a Flask app or a Celery worker?
-        #
-
-        if 'celery' not in sys.argv[0].lower():
-            # We are in the Flask app. Let's just schedule the task
-            return self.get_task_scheduler(fname, f)
-
-
-        # We are in celery - Let's put f in a wrapper that emulates a Flask
-        # context + handles crashes the same way pymacaron microservice does
-        # for API endpoints
-        log.info("Wrapping %s in a Flask/PyMacaron context emulator" % fname)
-
-        # Wrap f in the same crash handler as used in the API server
-        f = generate_crash_handler_decorator()(f)
-
+        # And wrap the decorated method with the flask emulator
         @wraps(f)
-        def mock_flask_context(*args, **kwargs):
+        def exec_or_schedule_f(*args, **kwargs):
 
-            # We are executing in a worker, but this worker could be scheduling a new task...
-            # Let's check if the token is indeed a token. If not, we assume the worker
-            # is scheduling a new task.
-            if args and len(args) >= 3 and type(args[0]) is str and args[0] == self.magic:
-                # Wheeee!!! We got a task to execute!
-                url = args[1]
-                token = args[2]
-                args = args[3:]
+            arg0 = None
+            if args and len(args) > 0:
+                arg0 = args[0]
 
-                log.info('')
-                log.info('')
-                log.info(' => ASYNC TASK %s (delayed: %s sec)' % (fname, self.delay))
-                log.info('')
-                log.info('')
-                log.info('    url: %s' % url)
-                log.info('    token: %s' % token)
-                log.debug('    args: %s' % json.dumps(args, indent=4))
-                log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
-                log.info('')
-                log.info('')
-                with flaskapp.test_request_context(url):
-                    if token:
-                        load_auth_token(token)
-                    f(*args, **kwargs)
+            # log.debug("First arg is [%s]" % arg0)
+
+            # Is this code called with the magic word as first param?
+            if arg0 == self.magic:
+                # Weee!! We are running asynchronous. Let's mock the flask
+                # context execute the wrapped method
+                self.exec_f(f, fname, args, kwargs)
+
             else:
-                # This is a task in a task, no need to reschedule it
-                log.info(" => TASK IN TASK: executing %s immediately" % fname)
-                f(*args, **kwargs)
+                # No magic keyword: this is a direct call. Let's wrap the called
+                # method in a celery task and schedule it
+                log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
+
+                ff = copy_func(f)
+
+                # Wrap f in the same crash handler as used in the API
+                generate_crash_handler_decorator()(ff)
+                ff = app.task(ff, typing=False)
+
+                url = request.url
+                token = get_user_token()
+                args = (self.magic, url, token) + args
+                ff.apply_async(args=args, kwargs=kwargs, countdown=self.delay)
 
         # Return the wrapped task
-        newf = app.task(mock_flask_context, typing=False)
+        log.info("Registering celery task for %s (delay: %s)" % (fname, self.delay))
+        newf = app.task(exec_or_schedule_f, typing=False)
         return newf
