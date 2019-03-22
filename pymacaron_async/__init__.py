@@ -18,10 +18,11 @@ log = logging.getLogger(__name__)
 flaskapp = Flask('pym-async')
 
 
-def get_celery_cmd(debug, keep_alive=False):
+def get_celery_cmd(debug, keep_alive=False, concurrency=None):
     level = 'debug' if debug else 'info'
     maxmem = 200 * 1024
-    concurrency = 1
+    if not concurrency:
+        concurrency = 8
 
     cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
     if keep_alive:
@@ -39,7 +40,7 @@ def kill_celery():
         os.kill(int(pid), signal.SIGTERM)
 
 
-def start_celery(port, debug):
+def start_celery(port, debug, concurrency=None):
     """Start celery workers"""
 
     # First, stop currently running celery workers (only those running pymacaron microservices)
@@ -48,7 +49,7 @@ def start_celery(port, debug):
     # Then start celery anew
     os.environ['PYM_CELERY_PORT'] = str(port)
     os.environ['PYM_CELERY_DEBUG'] = '1' if debug else ''
-    cmd = get_celery_cmd(debug, keep_alive=False)
+    cmd = get_celery_cmd(debug, keep_alive=False, concurrency=concurrency)
 
     log.info("Spawning celery worker")
     Popen(
