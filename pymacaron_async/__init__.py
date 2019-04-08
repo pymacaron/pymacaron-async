@@ -98,8 +98,12 @@ class asynctask(object):
         with flaskapp.test_request_context(url):
             if token:
                 load_auth_token(token)
-            f(*args, **kwargs)
 
+            # Wrap f in the same crash handler as used in the API
+            def do_f(*args2, **kwargs2):
+                f(*args2, **kwargs2)
+            cf = generate_crash_handler_decorator()(do_f)
+            cf(*args, **kwargs)
 
     def __call__(self, f):
         fname = f.__name__
@@ -120,7 +124,7 @@ class asynctask(object):
             # Is this code called with the magic word as first param?
             if arg0 == self.magic:
                 # Weee!! We are running asynchronous. Let's mock the flask
-                # context execute the wrapped method
+                # context and execute the sync method
                 self.exec_f(f, fname, args, kwargs)
 
             else:
@@ -129,9 +133,6 @@ class asynctask(object):
                 log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
 
                 ff = copy_func(f)
-
-                # Wrap f in the same crash handler as used in the API
-                generate_crash_handler_decorator()(ff)
                 ff = app.task(ff, typing=False)
 
                 url = request.url
