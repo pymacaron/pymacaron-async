@@ -10,6 +10,7 @@ from subprocess import Popen
 from pymacaron_async.app import app
 from pymacaron.auth import get_user_token, load_auth_token
 from pymacaron.crash import generate_crash_handler_decorator
+from pymacaron.config import get_config
 
 
 log = logging.getLogger(__name__)
@@ -22,7 +23,13 @@ def get_celery_cmd(debug, keep_alive=False, concurrency=None):
     level = 'debug' if debug else 'info'
     maxmem = 200 * 1024
     if not concurrency:
-        concurrency = 8
+        conf = get_config()
+        if hasattr(conf, 'worker_count'):
+            # Start worker_count parrallel celery workers
+            concurrency = conf.worker_count
+        else:
+            # Default to 8 parrallel celery workers
+            concurrency = 8
 
     cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
     if keep_alive:
