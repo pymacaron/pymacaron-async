@@ -1,0 +1,4 @@
+dummy_config: required so imports work in tests
+
+live_host: whatever
+

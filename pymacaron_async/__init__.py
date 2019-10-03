@@ -7,12 +7,13 @@ from flask import Flask, request
 from functools import wraps, update_wrapper
 import types
 from subprocess import Popen
-from pymacaron_async.app import app
-from pymacaron_core.models import PyMacaronModel
-from pymacaron_core.models import get_model
-from pymacaron.auth import get_user_token, load_auth_token
+from pymacaron.auth import get_user_token
+from pymacaron.auth import load_auth_token
 from pymacaron.crash import generate_crash_handler_decorator
 from pymacaron.config import get_config
+from pymacaron_async.serialization import model_to_task_arg
+from pymacaron_async.serialization import task_arg_to_model
+from pymacaron_async.app import app
 
 
 log = logging.getLogger(__name__)
@@ -81,33 +82,6 @@ def copy_func(f):
     g = update_wrapper(g, f)
     g.__kwdefaults__ = f.__kwdefaults__
     return g
-
-
-def model_to_task_arg(o):
-    """Take an object, and if it is a PyMacaron model, serialize it into json so it
-    can be passed as argument of a Celery task. Otherwise return the object
-    unchanged
-    """
-
-    if not isinstance(o, PyMacaronModel):
-        return o
-
-    # It's a PyMacaron model, let's serialize it to json and attach a magic marker to it
-    j = o.to_json()
-    j['__pymacaron_model_name'] = o.get_model_name()
-    log.debug("Serialized PyMacaronModel %s to celery task arg" % j['__pymacaron_model_name'])
-    return j
-
-
-def task_arg_to_model(o):
-    """The opposite of model_to_tupple"""
-    if type(o) is dict and '__pymacaron_model_name' in o:
-        model_name = o['__pymacaron_model_name']
-        log.debug("Deserialized celery task arg to PyMacaronModel: %s" % model_name)
-        del o['__pymacaron_model_name']
-        return get_model(model_name).from_json(o)
-    else:
-        return o
 
 
 class asynctask(object):
