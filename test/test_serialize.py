@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
             j,
             {
                 '__pymacaron_model_name': 'Foo',
-                  'bars': [{'baz': 2}, {'baz': 3}],
+                'bars': [{'baz': 2}, {'baz': 3}],
                 'foo': 'blabla',
             }
         )
@@ -71,7 +71,7 @@ class Test(unittest.TestCase):
         o = task_arg_to_model(
             {
                 '__pymacaron_model_name': 'Foo',
-                  'bars': [{'baz': 2}, {'baz': 3}],
+                'bars': [{'baz': 2}, {'baz': 3}],
                 'foo': 'blabla',
             }
         )
@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
         self.assertEqual(
             j,
             {
-                  'bars': [{'baz': 2}, {'baz': 3}],
+                'bars': [{'baz': 2}, {'baz': 3}],
                 'foo': 'blabla',
             }
         )
