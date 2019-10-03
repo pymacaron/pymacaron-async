@@ -8,6 +8,8 @@ from functools import wraps, update_wrapper
 import types
 from subprocess import Popen
 from pymacaron_async.app import app
+from pymacaron_core.models import PyMacaronModel
+from pymacaron_core.models import get_model
 from pymacaron.auth import get_user_token, load_auth_token
 from pymacaron.crash import generate_crash_handler_decorator
 from pymacaron.config import get_config
@@ -69,12 +71,43 @@ def start_celery(port, debug, concurrency=None):
 
 def copy_func(f):
     """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
-                           argdefs=f.__defaults__,
-                           closure=f.__closure__)
+    g = types.FunctionType(
+        f.__code__,
+        f.__globals__,
+        name=f.__name__,
+        argdefs=f.__defaults__,
+        closure=f.__closure__,
+    )
     g = update_wrapper(g, f)
     g.__kwdefaults__ = f.__kwdefaults__
     return g
+
+
+def model_to_task_arg(o):
+    """Take an object, and if it is a PyMacaron model, serialize it into json so it
+    can be passed as argument of a Celery task. Otherwise return the object
+    unchanged
+    """
+
+    if not isinstance(o, PyMacaronModel):
+        return o
+
+    # It's a PyMacaron model, let's serialize it to json and attach a magic marker to it
+    j = o.to_json()
+    j['__pymacaron_model_name'] = o.get_model_name()
+    log.debug("Serialized PyMacaronModel %s to celery task arg" % j['__pymacaron_model_name'])
+    return j
+
+
+def task_arg_to_model(o):
+    """The opposite of model_to_tupple"""
+    if type(o) is dict and '__pymacaron_model_name' in o:
+        model_name = o['__pymacaron_model_name']
+        log.debug("Deserialized celery task arg to PyMacaronModel: %s" % model_name)
+        del o['__pymacaron_model_name']
+        return get_model(model_name).from_json(o)
+    else:
+        return o
 
 
 class asynctask(object):
@@ -102,6 +135,12 @@ class asynctask(object):
         log.info('')
         log.info('')
 
+        # Restore PyMacaron Models passed in arguments as json
+        args = [task_arg_to_model(o) for o in args]
+        for k in list(kwargs.keys()):
+            kwargs[k] = task_arg_to_model(kwargs[k])
+
+        # Simulate a flask context, with the initial url and auth token
         with flaskapp.test_request_context(url):
             if token:
                 load_auth_token(token)
@@ -110,9 +149,18 @@ class asynctask(object):
             def do_f(*args2, **kwargs2):
                 f(*args2, **kwargs2)
             cf = generate_crash_handler_decorator()(do_f)
+
+            # And execute the actual asynchronous method
             cf(*args, **kwargs)
 
-    def __call__(self, f):
+
+    def __call__(self, f, *aargs):
+
+        # Catch silly syntax error, when using decorator with @asynctask, without ()
+        if len(aargs):
+            raise Exception("You forgot parenthesis when calling asynctask: @asynctask()")
+
+        # Find out the decorated method's name
         fname = f.__name__
         m = inspect.getmodule(f)
         if m:
@@ -126,17 +174,23 @@ class asynctask(object):
             if args and len(args) > 0:
                 arg0 = args[0]
 
-            # log.debug("First arg is [%s]" % arg0)
-
             # Is this code called with the magic word as first param?
             if arg0 == self.magic:
                 # Weee!! We are running asynchronous. Let's mock the flask
                 # context and execute the sync method
+
                 self.exec_f(f, fname, args, kwargs)
 
             else:
                 # No magic keyword: this is a direct call. Let's wrap the called
                 # method in a celery task and schedule it
+
+                # Serialize PyMacaron Models into simple python primitives supported by celery
+                args = tuple([model_to_task_arg(o) for o in args])
+                for k in list(kwargs.keys()):
+                    kwargs[k] = model_to_task_arg(kwargs[k])
+
+                # And queue up the task
                 log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
 
                 ff = copy_func(f)
