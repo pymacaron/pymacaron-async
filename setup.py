@@ -44,6 +44,7 @@ setup(
         'celery',
         'pycurl',
         'redis',
+        'supervisor',
     ],
     tests_require=[
         'psutil',

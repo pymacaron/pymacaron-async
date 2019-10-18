@@ -34,9 +34,7 @@ def get_celery_cmd(debug, keep_alive=False, concurrency=None):
             # Default to 8 parrallel celery workers
             concurrency = 8
 
-    cmd = 'celery worker -E -A pymacaron_async --concurrency=%s --loglevel=%s --include pymacaron_async.loader --max-memory-per-child=%s' % (concurrency, level, maxmem)
-    if keep_alive:
-        cmd = 'while true; do %s; sleep 5; done' % cmd
+    cmd = 'pymasync --concurrency %s --maxmem %s --level %s' % (concurrency, maxmem, level)
 
     return cmd
 
