@@ -36,6 +36,9 @@ def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
 
     cmd = 'pymasync --concurrency %s --maxmem %s --level %s' % (concurrency, maxmem, level)
 
+    if keep_alive:
+        cmd += ' --keep-alive'
+
     return cmd
 
 
