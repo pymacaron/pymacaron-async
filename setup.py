@@ -43,7 +43,7 @@ setup(
         'pymacaron',
         'celery',
         'pycurl',
-        'redis==2.10.6',
+        'redis==3.2.0',
         'supervisor',
     ],
     tests_require=[
@@ -54,7 +54,7 @@ setup(
         'pymacaron-unit',
         'pymacaron',
         'celery',
-        'redis==2.10.6',
+        'redis==3.2.0',
     ],
     packages=['pymacaron_async'],
     scripts=glob("bin/*"),
