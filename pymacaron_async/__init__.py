@@ -48,7 +48,7 @@ def kill_celery():
         os.kill(int(pid), signal.SIGTERM)
 
 
-def start_celery(port, debug, concurrency=None):
+def start_celery(port, debug, concurrency=None, keep_alive=False):
     """Start celery workers"""
 
     # First, stop currently running celery workers (only those running pymacaron microservices)
@@ -57,7 +57,7 @@ def start_celery(port, debug, concurrency=None):
     # Then start celery anew
     os.environ['PYM_CELERY_PORT'] = str(port)
     os.environ['PYM_CELERY_DEBUG'] = '1' if debug else ''
-    cmd = get_celery_cmd(debug=debug, keep_alive=False, concurrency=concurrency)
+    cmd = get_celery_cmd(debug=debug, keep_alive=keep_alive, concurrency=concurrency)
 
     log.info("Spawning celery worker")
     Popen(
