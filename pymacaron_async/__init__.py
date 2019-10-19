@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 flaskapp = Flask('pym-async')
 
 
-def get_celery_cmd(debug, keep_alive=False, concurrency=None):
+def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
     level = 'debug' if debug else 'info'
     maxmem = 200 * 1024
     if not concurrency:
