@@ -62,6 +62,7 @@ CMD="$PATH_CELERY worker -E -A pymacaron_async --concurrency=$CONCURRENCY --logl
 
 if [ -z "$USE_SUPERVISOR" ]; then
     eval $CMD
+    return
 fi
 
 cat <<EOF > supervisord.conf
