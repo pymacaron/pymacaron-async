@@ -1,7 +1,8 @@
-from setuptools import setup
 import sys
 import os
+from setuptools import setup
 from glob import glob
+from os import path
 
 version = None
 
@@ -31,7 +32,6 @@ if version:
 print("version: %s" % version)
 
 # read the contents of the README file
-from os import path
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
