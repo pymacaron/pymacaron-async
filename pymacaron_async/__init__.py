@@ -14,6 +14,7 @@ from pymacaron.config import get_config
 from pymacaron_async.serialization import model_to_task_arg
 from pymacaron_async.serialization import task_arg_to_model
 from pymacaron_async.app import app
+from pymacaron.resources import get_celery_worker_count
 
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
             concurrency = conf.worker_count
         else:
             # Default to 8 parrallel celery workers
-            concurrency = 8
+            concurrency = get_celery_worker_count()
 
     cmd = 'pymasync --concurrency %s --maxmem %s --level %s' % (concurrency, maxmem, level)
 
