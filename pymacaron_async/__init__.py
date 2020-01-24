@@ -10,11 +10,9 @@ from subprocess import Popen
 from pymacaron.auth import get_user_token
 from pymacaron.auth import load_auth_token
 from pymacaron.crash import generate_crash_handler_decorator
-from pymacaron.config import get_config
 from pymacaron_async.serialization import model_to_task_arg
 from pymacaron_async.serialization import task_arg_to_model
 from pymacaron_async.app import app
-from pymacaron.resources import get_celery_worker_count
 
 
 log = logging.getLogger(__name__)
@@ -25,20 +23,14 @@ flaskapp = Flask('pym-async')
 
 def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
     level = 'debug' if debug else 'info'
-    maxmem = 200 * 1024
-    if not concurrency:
-        conf = get_config()
-        if hasattr(conf, 'worker_count'):
-            # Start worker_count parrallel celery workers
-            concurrency = conf.worker_count
-        else:
-            # Default to 8 parrallel celery workers
-            concurrency = get_celery_worker_count()
 
-    cmd = 'pymasync --concurrency %s --maxmem %s --level %s' % (concurrency, maxmem, level)
+    cmd = 'pymasync --level %s' % level
 
     if keep_alive:
         cmd += ' --keep-alive'
+
+    if concurrency:
+        cmd += ' --concurrency %s' % concurrency
 
     return cmd
 

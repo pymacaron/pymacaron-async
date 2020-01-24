@@ -9,10 +9,10 @@ PROG=$(basename $0)
 USE_SUPERVISOR=
 
 # Workers using more than MAXMEM will be restarted
-MAXMEM=204800
+MAXMEM=
 
 # Number of workers to run in parrallel
-CONCURRENCY=1
+CONCURRENCY=
 
 # Debug level of celery output
 LEVEL=info
@@ -27,8 +27,8 @@ file to monitor and start the celery workers.
 
 OPTIONS:
   --keep-alive      Use supervisord to keep Celery alive
-  --concurrency N   Number of Celery workers to execute in parrallel (default: $CONCURRENCY)
-  --maxmem M        Workers using more than M megabytes get restarted (default: $MAXMEM)
+  --concurrency N   Number of Celery workers to execute in parrallel (default from pymacaron.resources)
+  --maxmem M        Workers using more than M megabytes get restarted (default from pymacaron.resources)
   --level L         Debug level of Celery workers (default: $LEVEL)
   --help            This help
 
@@ -56,6 +56,16 @@ parse_args() {
 }
 
 parse_args $ARGS
+
+if [ -z "$CONCURRENCY" ]; then
+    CONCURRENCY="$(python -c 'from pymacaron.resources import get_celery_worker_count; print(get_celery_worker_count())' | tail -n 1)"
+    echo "Setting --concurrency to $CONCURRENCY"
+fi
+
+if [ -z "$MAXMEM" ]; then
+    MAXMEM="$(python -c 'from pymacaron.resources import get_celery_worker_memory_limit; print(get_celery_worker_memory_limit())' | tail -n 1)"
+    echo "Setting --maxmem to $MAXMEM"
+fi
 
 PATH_CELERY=$(which celery)
 CMD="$PATH_CELERY worker -E -A pymacaron_async --concurrency=$CONCURRENCY --loglevel=$LEVEL --include pymacaron_async.loader --max-memory-per-child=$MAXMEM"
