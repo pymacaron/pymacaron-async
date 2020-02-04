@@ -24,5 +24,5 @@ server = imp.load_source('server', os.path.join(root_dir, 'server.py'))
 try:
     server.start(port=port, debug=debug)
 except Exception as e:
-    report_error("Celery worker crashed: %s" % e)
+    report_error("Celery worker crashed: %s" % e, caught=e, is_fatal=True)
     raise e
