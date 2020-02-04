@@ -3,6 +3,7 @@ import sys
 import logging
 import imp
 from pymacaron import get_config
+from pymacaron.crash import report_error
 
 
 log = logging.getLogger(__name__)
@@ -20,4 +21,8 @@ debug = True if os.environ.get('PYM_CELERY_DEBUG', False) else False
 
 # Find server.py, load it and call start()
 server = imp.load_source('server', os.path.join(root_dir, 'server.py'))
-server.start(port=port, debug=debug)
+try:
+    server.start(port=port, debug=debug)
+except Exception as e:
+    report_error("Celery worker crashed: %s" % e)
+    raise e
