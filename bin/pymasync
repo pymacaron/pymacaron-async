@@ -88,8 +88,10 @@ serverurl=unix:///tmp/supervisor.sock
 
 [program:celeryd]
 command=$CMD
-stdout_logfile=/dev/fd/1
+stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 autostart=true
 autorestart=true
 startsecs=10
