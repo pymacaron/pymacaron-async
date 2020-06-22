@@ -86,8 +86,8 @@ serverurl=unix:///tmp/supervisor.sock
 
 [program:celeryd]
 command=$CMD
-# stdout_logfile=/var/log/celery-worker.log
-# stderr_logfile=/var/log/celery-worker.log
+stdout_logfile=/var/log/celery-worker.log
+stderr_logfile=/var/log/celery-worker.log
 autostart=true
 autorestart=true
 startsecs=10
