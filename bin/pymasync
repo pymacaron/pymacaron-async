@@ -90,10 +90,9 @@ serverurl=unix:///tmp/supervisor.sock
 
 [program:celeryd]
 command=$CMD
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stdout
-stderr_logfile_maxbytes=0
+logfile=/var/log/celery-workers.log
+logfile_maxbytes=50MB
+logfile_backups=5
 autostart=true
 autorestart=true
 startsecs=10
