@@ -11,11 +11,11 @@ log = logging.getLogger(__name__)
 app = Celery('tasks')
 
 
-# Override celery logging
+# Redirect celery logs to stdout
+# See https://stackoverflow.com/questions/22146815/how-to-programmatically-tell-celery-to-send-all-log-messages-to-stdout-or-stderr
 @after_setup_logger.connect
 def setup_loggers(logger, *args, **kwargs):
     setup_logger(celery=True)
-
 
 # Initialize monitoring, if any
 monitor_init(celery=True)
