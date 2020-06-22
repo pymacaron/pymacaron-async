@@ -15,7 +15,7 @@ MAXMEM=
 CONCURRENCY=
 
 # Debug level of celery output
-LEVEL=info
+LEVEL=debug
 
 usage() {
     cat << EOF
