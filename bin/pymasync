@@ -83,10 +83,6 @@ logfile=/var/log/supervisord.log
 logfile_maxbytes=50MB
 logfile_backups=5
 loglevel=$LEVEL
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stdout
-stderr_logfile_maxbytes=0
 nodaemon=true
 
 [supervisorctl]
@@ -94,9 +90,6 @@ serverurl=unix:///tmp/supervisor.sock
 
 [program:celeryd]
 command=$CMD
-logfile=/var/log/celery-workers.log
-logfile_maxbytes=50MB
-logfile_backups=5
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stdout
