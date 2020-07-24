@@ -1,4 +1,5 @@
 import os
+import sys
 import signal
 import logging
 import inspect
@@ -19,6 +20,11 @@ log = logging.getLogger(__name__)
 
 
 flaskapp = Flask('pym-async')
+
+
+def is_celery_task():
+    """Return true if the code is being executed inside a Celery task, False otherwise"""
+    return True if 'celery' in sys.argv[0].lower() else False
 
 
 def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
