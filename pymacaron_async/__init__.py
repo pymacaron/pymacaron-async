@@ -24,7 +24,7 @@ flaskapp = Flask('pym-async')
 
 def is_celery_task():
     """Return true if the code is being executed inside a Celery task, False otherwise"""
-    return True if 'celery' in sys.argv[0].lower() else False
+    return True if 'celery worker' in ' '.join(sys.argv).lower() else False
 
 
 def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
@@ -173,7 +173,11 @@ class asynctask(object):
                 url = request.url
                 token = get_user_token()
                 args = (self.magic, url, token) + args
-                ff.apply_async(args=args, kwargs=kwargs, countdown=self.delay)
+                ff.apply_async(
+                    args=args,
+                    kwargs=kwargs,
+                    countdown=self.delay,
+                )
 
         # Return the wrapped task
         log.info("Registering celery task for %s (delay: %s)" % (fname, self.delay))
