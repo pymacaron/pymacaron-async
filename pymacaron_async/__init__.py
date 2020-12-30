@@ -14,6 +14,7 @@ from pymacaron.crash import generate_crash_handler_decorator
 from pymacaron_async.serialization import model_to_task_arg
 from pymacaron_async.serialization import task_arg_to_model
 from pymacaron_async.app import app
+from pymacaron_async.cmd import get_celery_cmd
 
 
 log = logging.getLogger(__name__)
@@ -25,20 +26,6 @@ flaskapp = Flask('pym-async')
 def is_celery_task():
     """Return true if the code is being executed inside a Celery task, False otherwise"""
     return True if 'celery worker' in ' '.join(sys.argv).lower() else False
-
-
-def get_celery_cmd(debug=False, keep_alive=False, concurrency=None):
-    level = 'debug' if debug else 'info'
-
-    cmd = 'pymasync --level %s' % level
-
-    if keep_alive:
-        cmd += ' --keep-alive'
-
-    if concurrency:
-        cmd += ' --concurrency %s' % concurrency
-
-    return cmd
 
 
 def kill_celery():
