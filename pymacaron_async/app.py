@@ -1,11 +1,11 @@
-import logging
+from pymacaron.log import pymlogger
 from celery import Celery
 from celery.signals import after_setup_logger
 from pymacaron.monitor import monitor_init
 from pymacaron.log import setup_logger
 
 
-log = logging.getLogger(__name__)
+log = pymlogger(__name__)
 
 
 app = Celery('tasks')

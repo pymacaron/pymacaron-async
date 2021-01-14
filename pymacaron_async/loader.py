@@ -1,12 +1,12 @@
 import os
 import sys
-import logging
+from pymacaron.log import pymlogger
 import imp
 from pymacaron import get_config
 from pymacaron.crash import report_error
 
 
-log = logging.getLogger(__name__)
+log = pymlogger(__name__)
 
 
 # Find the nearest pym-config.yaml and load its surrounding modules

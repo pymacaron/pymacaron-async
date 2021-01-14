@@ -1,7 +1,7 @@
 import os
 import sys
 import signal
-import logging
+from pymacaron.log import pymlogger
 import inspect
 import json
 from flask import Flask, request
@@ -17,7 +17,7 @@ from pymacaron_async.app import app
 from pymacaron_async.cmd import get_celery_cmd
 
 
-log = logging.getLogger(__name__)
+log = pymlogger(__name__)
 
 
 flaskapp = Flask('pym-async')

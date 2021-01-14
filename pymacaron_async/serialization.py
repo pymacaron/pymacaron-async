@@ -1,9 +1,9 @@
-import logging
+from pymacaron.log import pymlogger
 from pymacaron_core.models import PyMacaronModel
 from pymacaron_core.models import get_model
 
 
-log = logging.getLogger(__name__)
+log = pymlogger(__name__)
 
 
 def model_to_task_arg(o):
