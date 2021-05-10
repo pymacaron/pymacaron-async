@@ -4,7 +4,7 @@ import signal
 from pymacaron.log import pymlogger
 import inspect
 import json
-from flask import Flask, request
+from flask import Flask, request, has_request_context
 from functools import wraps, update_wrapper
 import types
 from subprocess import Popen
@@ -80,9 +80,9 @@ class asynctask(object):
 
     def exec_f(self, f, fname, args, kwargs):
         """Execute the method f asynchronously, in a mocked flask context"""
-        url = args[1]
-        token = args[2]
-        args = args[3:]
+        url = args[1] if len(args) > 1 else None
+        token = args[2] if len(args) > 2 else None
+        args = args[3:] if len(args) > 3 else []
 
         log.info('')
         log.info('')
@@ -91,8 +91,11 @@ class asynctask(object):
         log.info('')
         log.info('    url: %s' % url)
         log.info('    token: %s' % token)
-        log.debug('    args: %s' % json.dumps(args, indent=4))
-        log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
+        try:
+            log.debug('    args: %s' % json.dumps(args, indent=4))
+            log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
+        except TypeError:
+            pass
         log.info('')
         log.info('')
 
@@ -136,15 +139,19 @@ class asynctask(object):
                 arg0 = args[0]
 
             # Is this code called with the magic word as first param?
-            if arg0 == self.magic:
+            # Or is this code called from a standalone script outside of a server request?
+            log.info("has_request_context: %s" % has_request_context())
+            if arg0 == self.magic or not has_request_context():
                 # Weee!! We are running asynchronous. Let's mock the flask
                 # context and execute the sync method
 
                 self.exec_f(f, fname, args, kwargs)
 
             else:
-                # No magic keyword: this is a direct call. Let's wrap the called
-                # method in a celery task and schedule it
+                # No magic keyword: this is a direct call. And we have a request_context, so
+                # we know the Flask server is currently handling a request.
+
+                # Let's wrap the called method in a celery task and schedule it
 
                 # Serialize PyMacaron Models into simple python primitives supported by celery
                 args = tuple([model_to_task_arg(o) for o in args])
