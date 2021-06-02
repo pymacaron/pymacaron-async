@@ -84,6 +84,8 @@ class asynctask(object):
         token = args[2] if len(args) > 2 else None
         args = args[3:] if len(args) > 3 else []
 
+        url = url if url else '/'
+
         log.info('')
         log.info('')
         log.info(' => ASYNC TASK %s (delayed: %s sec)' % (fname, self.delay))
