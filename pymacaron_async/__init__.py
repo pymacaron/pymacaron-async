@@ -1,16 +1,17 @@
 import os
 import sys
 import signal
-from pymacaron.log import pymlogger
 import inspect
 import json
 from flask import Flask, request, has_request_context
 from functools import wraps, update_wrapper
 import types
 from subprocess import Popen
+from pymacaron.log import pymlogger
 from pymacaron.auth import get_user_token
 from pymacaron.auth import load_auth_token
-from pymacaron.crash import generate_crash_handler_decorator
+from pymacaron.utils import timenow
+from pymacaron.crash import postmortem
 from pymacaron_async.serialization import model_to_task_arg
 from pymacaron_async.serialization import task_arg_to_model
 from pymacaron_async.app import app
@@ -109,13 +110,18 @@ class asynctask(object):
             if token:
                 load_auth_token(token)
 
-            # Wrap f in the same crash handler as used in the API
-            def do_f(*args2, **kwargs2):
-                f(*args2, **kwargs2)
-            cf = generate_crash_handler_decorator()(do_f)
-
-            # And execute the actual asynchronous method
-            cf(*args, **kwargs)
+            # And execute the actual asynchronous method, with the same crash
+            # handler as for flask endpoints
+            t0 = timenow()
+            try:
+                f(*args, **kwargs)
+            except BaseException as e:
+                postmortem(
+                    f=f,
+                    t0=t0,
+                    t1=timenow(),
+                    exception=e,
+                )
 
 
     def __call__(self, f, *aargs):
