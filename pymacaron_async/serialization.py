@@ -2,10 +2,6 @@ from pymacaron.log import pymlogger
 from pymacaron.model import PymacaronBaseModel
 from pymacaron import apipool
 
-# TODO: deprecate following release of pymacaron2
-from pymacaron_core.models import PyMacaronModel
-from pymacaron_core.models import get_model
-
 
 log = pymlogger(__name__)
 
@@ -23,12 +19,6 @@ def model_to_task_arg(o):
         j['__pymacaron_api_name'] = o.get_model_api()
         log.debug(f"Serialized PymacaronBaseModel {j['__pymacaron_model_name']} to celery task arg")
         return j
-    elif isinstance(o, PyMacaronModel):
-        # It's an old-style pymacaron model based on Bravado-core, let's serialize it to json and attach a magic marker to it
-        j = o.to_json()
-        j['__pymacaron_model_name'] = o.get_model_name()
-        log.debug("Serialized PyMacaronModel %s to celery task arg" % j['__pymacaron_model_name'])
-        return j
     elif type(o) is list:
         return [model_to_task_arg(oo) for oo in o]
     else:
@@ -44,11 +34,6 @@ def task_arg_to_model(o):
         del o['__pymacaron_model_name']
         del o['__pymacaron_api_name']
         return apipool.get_model(api_name).json_to_model(model_name, o)
-    elif type(o) is dict and '__pymacaron_model_name' in o:
-        model_name = o['__pymacaron_model_name']
-        log.debug(f"Deserialized celery task arg to PymacaronBaseModel: {model_name}")
-        del o['__pymacaron_model_name']
-        return get_model(model_name).from_json(o)
     elif type(o) is list:
         return [task_arg_to_model(oo) for oo in o]
     else:
