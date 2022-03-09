@@ -87,14 +87,14 @@ class asynctask(object):
 
         log.info('')
         log.info('')
-        log.info(' => ASYNC TASK %s (delayed: %s sec)' % (fname, self.delay))
+        log.info(f' => ASYNC TASK {fname} (delayed: {self.delay} sec)')
         log.info('')
         log.info('')
-        log.info('    url: %s' % url)
-        log.info('    token: %s' % token)
+        log.info(f'    url: {url}')
+        log.info(f'    token: {token}')
         try:
-            log.debug('    args: %s' % json.dumps(args, indent=4))
-            log.debug('    kwargs: %s' % json.dumps(kwargs, indent=4))
+            log.debug('    args: {json.dumps(args, indent=4)}')
+            log.debug('    kwargs: {json.dumps(kwargs, indent=4)}')
         except TypeError:
             pass
         log.info('')
@@ -116,6 +116,7 @@ class asynctask(object):
             try:
                 f(*args, **kwargs)
             except BaseException as e:
+                log.info(f"Async method {fname} raised exception: [{str(e)}]")
                 postmortem(
                     f=f,
                     t0=t0,
@@ -134,7 +135,7 @@ class asynctask(object):
         fname = f.__name__
         m = inspect.getmodule(f)
         if m:
-            fname = '%s.%s()' % (m.__name__, f.__name__)
+            fname = f'{m.__name__}.{f.__name__}()'
 
         # And wrap the decorated method with the flask emulator
         @wraps(f)
@@ -165,7 +166,7 @@ class asynctask(object):
                     kwargs[k] = model_to_task_arg(kwargs[k])
 
                 # And queue up the task
-                log.info('Queuing celery task for %s with delay=%s' % (fname, self.delay))
+                log.info(f'Queuing celery task for {fname} with delay={self.delay}')
 
                 ff = copy_func(f)
                 ff = app.task(ff, typing=False)
@@ -180,6 +181,6 @@ class asynctask(object):
                 )
 
         # Return the wrapped task
-        log.info("Registering celery task for %s (delay: %s)" % (fname, self.delay))
+        log.info(f'Registering celery task for {fname} (delay: {self.delay})')
         newf = app.task(exec_or_schedule_f, typing=False)
         return newf
