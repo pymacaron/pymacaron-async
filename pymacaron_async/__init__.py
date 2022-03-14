@@ -2,7 +2,6 @@ import os
 import sys
 import signal
 import inspect
-import json
 from flask import Flask, request, has_request_context
 from functools import wraps, update_wrapper
 import types

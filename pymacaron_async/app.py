@@ -2,6 +2,7 @@ from pymacaron.log import pymlogger
 from celery import Celery
 from celery.signals import after_setup_logger
 from pymacaron.monitor import monitor_init
+from pymacaron.config import get_config
 from pymacaron.log import setup_logger
 
 
@@ -17,8 +18,13 @@ app = Celery('tasks')
 def setup_loggers(logger, *args, **kwargs):
     setup_logger(celery=True)
 
+
 # Initialize monitoring, if any
 monitor_init(celery=True)
+
+# Load pymacaron config
+conf = get_config()
+conf.load_pym_config()
 
 app.conf.update(
     task_serializer='json',
