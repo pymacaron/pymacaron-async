@@ -22,9 +22,14 @@ def setup_loggers(logger, *args, **kwargs):
 # Initialize monitoring, if any
 monitor_init(celery=True)
 
-# Load pymacaron config
+# Load pymacaron config - Ignore if a pym-config yaml file cannot be found,
+# since it just means that pymacaron-async is used outside of a pymacaron
+# microservice
 conf = get_config()
-conf.load_pym_config()
+try:
+    conf.load_pym_config()
+except Exception:
+    pass
 
 app.conf.update(
     task_serializer='json',
