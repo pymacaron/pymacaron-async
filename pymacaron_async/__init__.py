@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import signal
 import inspect
 from flask import Flask, request, has_request_context
@@ -92,8 +93,8 @@ class asynctask(object):
         log.info(f'    url: {url}')
         log.info(f'    token: {token}')
         try:
-            log.debug('    args: {json.dumps(args, indent=4)}')
-            log.debug('    kwargs: {json.dumps(kwargs, indent=4)}')
+            log.debug(f'    args: {json.dumps(args, indent=4)}')
+            log.debug(f'    kwargs: {json.dumps(kwargs, indent=4)}')
         except TypeError:
             pass
         log.info('')
