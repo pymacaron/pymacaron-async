@@ -147,7 +147,10 @@ class asynctask(object):
 
             # Is this code called with the magic word as first param?
             # Or is this code called from a standalone script outside of a server request?
-            log.info("has_request_context: %s" % has_request_context())
+            log.info(f"has_request_context: {has_request_context()}")
+            log.debug(f"fname: {fname}")
+            log.debug(f"args: {args}")
+            log.debug(f"kwargs: {kwargs}")
             if arg0 == self.magic or not has_request_context():
                 # Weee!! We are running asynchronous. Let's mock the flask
                 # context and execute the sync method
