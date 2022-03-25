@@ -81,7 +81,7 @@ class asynctask(object):
 
     def exec_f(self, f, fname, args, kwargs):
         """Execute the method f asynchronously, in a mocked flask context"""
-        url = args[1] if len(args) > 1 else None
+        url = args[1] if len(args) > 1 else 'https://127.0.0.1/local'
         token = args[2] if len(args) > 2 else None
         args = args[3:] if len(args) > 3 else []
 
