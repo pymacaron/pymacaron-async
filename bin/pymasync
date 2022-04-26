@@ -39,7 +39,6 @@ USAGE:
 EOF
 }
 
-
 parse_args() {
     while [ "$1" != "" ]; do
         case $1 in
@@ -57,6 +56,16 @@ parse_args() {
 }
 
 parse_args $ARGS
+
+# Is this pymacaron service using async functionality?
+DO_ASYNC=$(pymconfig $PYMCONFIG_ARGS --with-async)
+if [ -z "$DO_ASYNC" ]; then
+    echo "=> This project does not use pymacaron-async"
+    exit 0
+fi
+
+# Start redis server
+redis-server &
 
 if [ -z "$CONCURRENCY" ]; then
     CONCURRENCY="$(python -c 'from pymacaron.resources import get_celery_worker_count; print(get_celery_worker_count())' | tail -n 1)"
