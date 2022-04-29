@@ -58,7 +58,7 @@ parse_args() {
 parse_args $ARGS
 
 # Is this pymacaron service using async functionality?
-DO_ASYNC=$(pymconfig $PYMCONFIG_ARGS --with-async)
+DO_ASYNC=$(pymconfig --env $PYM_ENV --with-async)
 if [ -z "$DO_ASYNC" ]; then
     echo "=> This project does not use pymacaron-async"
     exit 0
