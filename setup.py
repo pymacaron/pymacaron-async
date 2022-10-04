@@ -49,7 +49,7 @@ setup(
     install_requires=[
         'pymacaron-unit',
         'pymacaron',
-        'celery==4.3.0',
+        'celery==5.2.2',
         'redis==3.3.11',
         'kombu==4.6.5',
         'supervisor',
